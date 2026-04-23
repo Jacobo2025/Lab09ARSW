@@ -1,6 +1,6 @@
 ### Escuela Colombiana de Ingeniería
 ### Arquitecturas de Software - ARSW
-
+### Santiago Carmona - Jacobo Diaz
 ## Escalamiento en Azure con Maquinas Virtuales, Sacale Sets y Service Plans
 
 ### Dependencias
@@ -25,11 +25,26 @@ Cuando un conjunto de usuarios consulta un enésimo número (superior a 1000000)
 
 ![Imágen 1](images/part1/part1-vm-basic-config.png)
 
+### Evidencia
+![Creación maquina virtual](images_solution/Screenshot%202026-04-22%20at%206.35.41 PM.png)
+
+![Maquina virtual](images_solution/Screenshot%202026-04-22%20at%206.39.42 PM.png)
+
 2. Para conectarse a la VM use el siguiente comando, donde las `x` las debe remplazar por la IP de su propia VM (Revise la sección "Connect" de la virtual machine creada para tener una guía más detallada).
 
     `ssh scalability_lab@xxx.xxx.xxx.xxx`
 
+    ### Evidencia
+    Antes de conectarmos, tuvimos que descargar la clave .pem y darle permisos de ejecución.
+    ![conexion](images_solution/Screenshot%202026-04-22%20at%206.43.26 PM.png)
+
 3. Instale node, para ello siga la sección *Installing Node.js and npm using NVM* que encontrará en este [enlace](https://linuxize.com/post/how-to-install-node-js-on-ubuntu-18.04/).
+
+   ### Evidencia
+
+   ![alt text](images_solution/Screenshot%202026-04-22%20at%206.47.14 PM.png)
+
+
 4. Para instalar la aplicación adjunta al Laboratorio, suba la carpeta `FibonacciApp` a un repositorio al cual tenga acceso y ejecute estos comandos dentro de la VM:
 
     `git clone <your_repo>`
@@ -42,9 +57,16 @@ Cuando un conjunto de usuarios consulta un enésimo número (superior a 1000000)
 
     ` node FibonacciApp.js`
 
+   ### Evidencia
+   ![app corriendo](images_solution/Screenshot%202026-04-22%20at%206.51.06 PM.png)
+
 6. Antes de verificar si el endpoint funciona, en Azure vaya a la sección de *Networking* y cree una *Inbound port rule* tal como se muestra en la imágen. Para verificar que la aplicación funciona, use un browser y user el endpoint `http://xxx.xxx.xxx.xxx:3000/fibonacci/6`. La respuesta debe ser `The answer is 8`.
 
 ![](images/part1/part1-vm-3000InboudRule.png)
+
+### Evidencia
+![despliegue funcionando](images_solution/Screenshot%202026-04-22%20at%206.58.19 PM.png)
+
 
 7. La función que calcula en enésimo número de la secuencia de Fibonacci está muy mal construido y consume bastante CPU para obtener la respuesta. Usando la consola del Browser documente los tiempos de respuesta para dicho endpoint usando los siguintes valores:
     * 1000000
@@ -58,9 +80,16 @@ Cuando un conjunto de usuarios consulta un enésimo número (superior a 1000000)
     * 1080000
     * 1090000    
 
+    ### Evidencia
+    ![tiempos de respuesta](images_solution/Screenshot%202026-04-23%20at%206.46.39 AM.png)
+
 8. Dírijase ahora a Azure y verifique el consumo de CPU para la VM. (Los resultados pueden tardar 5 minutos en aparecer).
 
 ![Imágen 2](images/part1/part1-vm-cpu.png)
+
+  ### Evidencia
+  ![consumo cpu](images_solution/Screenshot%202026-04-23%20at%206.50.19 AM.png)
+
 
 9. Ahora usaremos Postman para simular una carga concurrente a nuestro sistema. Siga estos pasos.
     * Instale newman con el comando `npm install newman -g`. Para conocer más de Newman consulte el siguiente [enlace](https://learning.getpostman.com/docs/postman/collection-runs/command-line-integration-with-newman/).
@@ -78,23 +107,85 @@ Cuando un conjunto de usuarios consulta un enésimo número (superior a 1000000)
 ![Imágen 3](images/part1/part1-vm-resize.png)
 
 11. Una vez el cambio se vea reflejado, repita el paso 7, 8 y 9.
+   ### Evidencia
+   ![consumo cpu v2](images_solution/Screenshot%202026-04-23%20at%206.54.40 AM.png)
+   ![consumo](images_solution/Screenshot%202026-04-23%20at%206.59.35 AM.png)
+   
+
 12. Evalue el escenario de calidad asociado al requerimiento no funcional de escalabilidad y concluya si usando este modelo de escalabilidad logramos cumplirlo.
+
+  #### Respuesta
+  Si porque al redefinir el tamaño, aumentamos la capacidad de procesamiento de la máquina virtual. Esto se puede evidenciar en las capturas anteriores, donde los tiempos de respuesta fueron menores y el consumo de CPU también disminuyó.
+
 13. Vuelva a dejar la VM en el tamaño inicial para evitar cobros adicionales.
 
 **Preguntas**
 
 1. ¿Cuántos y cuáles recursos crea Azure junto con la VM?
+![alt text](images_solution/Screenshot%202026-04-23%20at%207.22.24 AM.png)
+
 2. ¿Brevemente describa para qué sirve cada recurso?
+
+    NIC: Conecta la VM a la red
+
+    VNet: Red virtual privada donde vive la VM
+
+    Subnet: Segmento dentro de la VNet
+
+    Public IP: Dirección IP pública para acceder desde internet (la que usas en el SSH)
+
+    NSG: Firewall que controla el tráfico entrante/saliente (aquí defines las reglas de puertos)
+
+    OS Disk: Disco duro virtual donde está el sistema operativo
+
 3. ¿Al cerrar la conexión ssh con la VM, por qué se cae la aplicación que ejecutamos con el comando `npm FibonacciApp.js`? ¿Por qué debemos crear un *Inbound port rule* antes de acceder al servicio?
+
+    Porque npm FibonacciApp.js corre como proceso hijo de la sesión SSH. Al cerrar la conexión, el proceso padre muere y arrastra todos sus hijos. Por eso se usa forever, que corre la app como proceso independiente del sistema.
+
+    El Inbound port rule es necesario porque el NSG bloquea todo el tráfico por defecto. Sin una regla que abra el puerto 3000, Azure descarta los paquetes antes de que lleguen a la VM.
+   
+
 4. Adjunte tabla de tiempos e interprete por qué la función tarda tando tiempo.
+ ![tiempos de respuesta](images_solution/Screenshot%202026-04-23%20at%206.46.39 AM.png)
+
+    Cada petición tarda en promedio 20 segundos, lo cual se explica por dos razones principales. Primero, la VM B1ls tiene recursos extremadamente limitados (1 vCPU y 0.5 GiB de RAM), lo que restringe severamente la capacidad de procesamiento. Segundo, y más importante, el algoritmo de Fibonacci implementado usa recursión simple, que tiene una complejidad exponencial O(2^n). Esto significa que para calcular el enésimo número, la función se llama a sí misma millones de veces recalculando los mismos valores repetidamente sin guardar resultados intermedios, lo que hace el proceso extremadamente ineficiente para valores grandes.
+
+
 5. Adjunte imágen del consumo de CPU de la VM e interprete por qué la función consume esa cantidad de CPU.
+  ![consumo cpu](images_solution/Screenshot%202026-04-23%20at%206.50.19 AM.png)
+
+    El consumo de CPU cercano al 50% se explica por la misma razón: el algoritmo recursivo sin memoización obliga al procesador a realizar una cantidad masiva de operaciones repetidas para cada petición. Al ser una VM con una sola vCPU, prácticamente la mitad de toda su capacidad de cómputo queda comprometida atendiendo una única solicitud. Si llegaran varias peticiones concurrentes, el consumo fácilmente superaría el 70% establecido como límite en el criterio de escalabilidad del laboratorio, lo que confirma que tanto el tamaño de la VM como la implementación del algoritmo son factores críticos del problema.
+
+
+
 6. Adjunte la imagen del resumen de la ejecución de Postman. Interprete:
     * Tiempos de ejecución de cada petición.
     * Si hubo fallos documentelos y explique.
 7. ¿Cuál es la diferencia entre los tamaños `B2ms` y `B1ls` (no solo busque especificaciones de infraestructura)?
+
+    El tamaño B1ls cuenta con 1 vCPU y apenas 0.5 GiB de RAM, mientras que el B2ms tiene 2 vCPUs y 8 GiB de RAM. Más allá de las especificaciones, ambos pertenecen a la serie B de Azure, que son máquinas de tipo "burstable", es decir, acumulan créditos de CPU cuando están en reposo y los gastan cuando necesitan mayor rendimiento. 
+    
+    Sin embargo, el B1ls acumula solo 6 créditos por hora, lo que lo hace adecuado únicamente para cargas mínimas y esporádicas como pruebas o aplicaciones muy livianas. El B2ms en cambio acumula 24 créditos por hora y tiene mucha más memoria, por lo que puede sostener cargas de trabajo moderadas por periodos más largos sin degradarse. En el contexto de este laboratorio, el B1ls claramente se queda sin recursos al recibir peticiones concurrentes pesadas como el cálculo de Fibonacci, mientras que el B2ms ofrece un margen significativamente mayor para manejar esa carga.
+
 8. ¿Aumentar el tamaño de la VM es una buena solución en este escenario?, ¿Qué pasa con la FibonacciApp cuando cambiamos el tamaño de la VM?
+
+    No es la mejor solución a largo plazo. Es escalabilidad vertical, que tiene un límite físico y un costo creciente. La FibonacciApp cuando cambia el tamaño de VM se reinicia, causando downtime.
+
+
+
 9. ¿Qué pasa con la infraestructura cuando cambia el tamaño de la VM? ¿Qué efectos negativos implica?
+    - La VM se reinicia (downtime)
+    - La app deja de responder durante el cambio
+    - Si no se usa forever o similar, hay que volver a iniciar la app manualmente
+
+
 10. ¿Hubo mejora en el consumo de CPU o en los tiempos de respuesta? Si/No ¿Por qué?
+
+    #### Antes del escalamiento
+
+    Sí hubo mejora. Al escalar verticalmente de B1ls a B2ms se evidencia una reducción notable en los tiempos de respuesta, lo cual se explica directamente por las mejores capacidades del B2ms. Esto permite que el procesador atienda las peticiones más rápido ya que tiene más recursos disponibles para ejecutar el algoritmo. Sin embargo, es importante aclarar que la mejora se debe exclusivamente al aumento del hardware y no a una optimización del algoritmo, por lo que con cargas suficientemente grandes o con muchas peticiones concurrentes, el sistema seguirá presentando limitaciones, simplemente tardará más en llegar a ese punto de saturación.
+
+
 11. Aumente la cantidad de ejecuciones paralelas del comando de postman a `4`. ¿El comportamiento del sistema es porcentualmente mejor?
 
 ### Parte 2 - Escalabilidad horizontal
