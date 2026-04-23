@@ -161,6 +161,16 @@ Cuando un conjunto de usuarios consulta un enésimo número (superior a 1000000)
 6. Adjunte la imagen del resumen de la ejecución de Postman. Interprete:
     * Tiempos de ejecución de cada petición.
     * Si hubo fallos documentelos y explique.
+
+        ![alt text](images_solution/image11.png)
+
+
+        Tiempos de ejecución:
+        Se ejecutaron 10 iteraciones con un tiempo total de 3 minutos y 33 segundos. El tiempo de respuesta promedio fue de 26.6 segundos por petición, con un mínimo de 14.1 segundos y un máximo de 51.2 segundos. Esta alta variación (desviación estándar de 12.4s) indica que la VM B1ls era inconsistente bajo carga concurrente, ya que mientras procesaba una petición pesada de Fibonacci, las siguientes debían esperar más tiempo para ser atendidas.
+        Fallos:
+        Se presentaron 4 fallos de tipo ECONNRESET en las iteraciones 3, 5, 7 y 9, es decir el 40% de las peticiones fallaron. El error ECONNRESET significa que el servidor cerró la conexión abruptamente antes de enviar una respuesta. Esto ocurrió porque la VM B1ls con apenas 1 vCPU y 0.5 GiB de RAM se saturó completamente al recibir peticiones concurrentes del cálculo recursivo de Fibonacci. Al no poder mantener todas las conexiones abiertas simultáneamente, el sistema simplemente las terminó forzosamente, evidenciando que esta infraestructura no cumple con el criterio de escalabilidad establecido que exige responder todas las peticiones con un consumo de CPU menor al 70%.
+
+
 7. ¿Cuál es la diferencia entre los tamaños `B2ms` y `B1ls` (no solo busque especificaciones de infraestructura)?
 
     El tamaño B1ls cuenta con 1 vCPU y apenas 0.5 GiB de RAM, mientras que el B2ms tiene 2 vCPUs y 8 GiB de RAM. Más allá de las especificaciones, ambos pertenecen a la serie B de Azure, que son máquinas de tipo "burstable", es decir, acumulan créditos de CPU cuando están en reposo y los gastan cuando necesitan mayor rendimiento. 
@@ -198,21 +208,36 @@ Antes de continuar puede eliminar el grupo de recursos anterior para evitar gast
 
 ![](images/part2/part2-lb-create.png)
 
+### Evidencia
+![load_balancer](images_solution/image.png)
+
 2. A continuación cree un *Backend Pool*, guiese con la siguiente imágen.
 
 ![](images/part2/part2-lb-bp-create.png)
+
+### Evidencia
+![alt text](images_solution/image1.png)
 
 3. A continuación cree un *Health Probe*, guiese con la siguiente imágen.
 
 ![](images/part2/part2-lb-hp-create.png)
 
+### Evidencia
+![alt text](images_solution/image2.png)
+
 4. A continuación cree un *Load Balancing Rule*, guiese con la siguiente imágen.
 
 ![](images/part2/part2-lb-lbr-create.png)
 
+### Evidencia
+![alt text](images_solution/image3.png)
+
 5. Cree una *Virtual Network* dentro del grupo de recursos, guiese con la siguiente imágen.
 
 ![](images/part2/part2-vn-create.png)
+
+### Evidencia
+![alt text](images_solution/image4.png)
 
 #### Crear las maquinas virtuales (Nodos)
 
@@ -252,25 +277,39 @@ forever start FibonacciApp.js
 
 Realice este proceso para las 3 VMs, por ahora lo haremos a mano una por una, sin embargo es importante que usted sepa que existen herramientas para aumatizar este proceso, entre ellas encontramos Azure Resource Manager, OsDisk Images, Terraform con Vagrant y Paker, Puppet, Ansible entre otras.
 
+### Evidencia
+#### IMPORTANTE!
+Solo se usaron 2 máquinas virtuales debido a que la licencia de estudiante no nos permitió crear la tercera máquina.
+![alt text](images_solution/image5.png)
+![alt text](images_solution/image6.png)
 #### Probar el resultado final de nuestra infraestructura
 
 1. Porsupuesto el endpoint de acceso a nuestro sistema será la IP pública del balanceador de carga, primero verifiquemos que los servicios básicos están funcionando, consuma los siguientes recursos:
 
-```
-http://52.155.223.248/
-http://52.155.223.248/fibonacci/1
-```
+### Ip del balanceador de carga
+![alt text](images_solution/image7.png)
+
+
+
+![alt text](images_solution/image8.png)
+![alt text](images_solution/images9.png)
 
 2. Realice las pruebas de carga con `newman` que se realizaron en la parte 1 y haga un informe comparativo donde contraste: tiempos de respuesta, cantidad de peticiones respondidas con éxito, costos de las 2 infraestrucruras, es decir, la que desarrollamos con balanceo de carga horizontal y la que se hizo con una maquina virtual escalada.
 
+    ![alt text](images_solution/image10.png)
+
 3. Agregue una 4 maquina virtual y realice las pruebas de newman, pero esta vez no lance 2 peticiones en paralelo, sino que incrementelo a 4. Haga un informe donde presente el comportamiento de la CPU de las 4 VM y explique porque la tasa de éxito de las peticiones aumento con este estilo de escalabilidad.
 
-```
-newman run ARSW_LOAD-BALANCING_AZURE.postman_collection.json -e [ARSW_LOAD-BALANCING_AZURE].postman_environment.json -n 10 &
-newman run ARSW_LOAD-BALANCING_AZURE.postman_collection.json -e [ARSW_LOAD-BALANCING_AZURE].postman_environment.json -n 10 &
-newman run ARSW_LOAD-BALANCING_AZURE.postman_collection.json -e [ARSW_LOAD-BALANCING_AZURE].postman_environment.json -n 10 &
-newman run ARSW_LOAD-BALANCING_AZURE.postman_collection.json -e [ARSW_LOAD-BALANCING_AZURE].postman_environment.json -n 10
-```
+    ```
+    newman run ARSW_LOAD-BALANCING_AZURE.postman_collection.json -e [ARSW_LOAD-BALANCING_AZURE].postman_environment.json -n 10 &
+    newman run ARSW_LOAD-BALANCING_AZURE.postman_collection.json -e [ARSW_LOAD-BALANCING_AZURE].postman_environment.json -n 10 &
+    newman run ARSW_LOAD-BALANCING_AZURE.postman_collection.json -e [ARSW_LOAD-BALANCING_AZURE].postman_environment.json -n 10 &
+    newman run ARSW_LOAD-BALANCING_AZURE.postman_collection.json -e [ARSW_LOAD-BALANCING_AZURE].postman_environment.json -n 10
+    ```
+    Este punto no se puede realizar debido a la limitación de la suscripción de AWS 
+
+
+
 
 **Preguntas**
 
